@@ -290,6 +290,11 @@
       .search-box { padding: 18px; }
       .filters-grid { grid-template-columns: 1fr; }
     }
+    /* Estilos del Panel de Administración Flotante */
+    #adminModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; }
+    .admin-content { background: white; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; padding: 30px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: relative; }
+    .close-admin { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #e74c3c; font-weight: bold; }
+    .admin-card { display: flex; justify-content: space-between; align-items: center; background: #f9f9f9; border: 1px solid #ddd; padding: 12px; margin-bottom: 10px; border-radius: 4px; }
   </style>
   <!-- Librería oficial de Supabase (permite hablar con la base de datos desde el navegador) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -1159,6 +1164,207 @@
       alert("¡Propiedad registrada con éxito!");
       e.target.reset();
     }
+    // --- CONFIGURACIÓN DEL PANEL SECRETO ---
+  const PASSWORD_MAESTRA = '1234'; // Cambia esto por la contraseña que tú quieras
+  let bufferTeclado = '';
+
+  // Escuchar cuando escribas en el teclado para abrir el panel
+  window.addEventListener('keydown', (e) => {
+    bufferTeclado += e.key.toLowerCase();
+    if (bufferTeclado.length > 20) bufferTeclado = bufferTeclado.slice(-20);
+    
+    // Si escribes la palabra "admin", se abre la ventana secreta
+    if (bufferTeclado.includes('admin')) {
+      bufferTeclado = '';
+      document.getElementById('adminModal').style.display = 'flex';
+      document.getElementById('adminLoginView').style.display = 'block';
+      document.getElementById('adminDashboardView').style.display = 'none';
+      document.getElementById('inputMasterPass').value = '';
+      document.getElementById('errorPass').innerText = '';
+    }
+  });
+
+  function cerrarAdminPanel() {
+    document.getElementById('adminModal').style.display = 'none';
+  }
+
+  // Verificar la contraseña maestra sencilla
+  function verificarMasterPass() {
+    const pass = document.getElementById('inputMasterPass').value;
+    if (pass === PASSWORD_MAESTRA) {
+      document.getElementById('adminLoginView').style.display = 'none';
+      document.getElementById('adminDashboardView').style.display = 'block';
+      cargarPanelAdminDatos();
+    } else {
+      document.getElementById('errorPass').innerText = '⚠️ Contraseña incorrecta';
+    }
+  }
+
+  // Cargar datos dentro del panel de administración
+  async function cargarPanelAdminDatos() {
+    // 1. Cargar Agentes en el selector
+    const { data: agentes } = await supabaseClient.from('agentes').select('id, nombre');
+    const selectAgente = document.getElementById('admAgente');
+    if (agentes) {
+      selectAgente.innerHTML = '<option value="">Selecciona un agente...</option>';
+      agentes.forEach(a => {
+        selectAgente.innerHTML += `<option value="${a.id}">${a.nombre}</option>`;
+      });
+    }
+
+    // 2. Cargar lista de propiedades con opción de cambiar estado
+    const { data: props } = await supabaseClient.from('propiedades').select('*').order('created_at', { ascending: false });
+    const listaDiv = document.getElementById('admListaProp');
+    
+    if (!props || props.length === 0) {
+      listaDiv.innerHTML = '<p>No hay propiedades.</p>';
+      return;
+    }
+
+    listaDiv.innerHTML = '';
+    props.forEach(p => {
+      const estadoActual = p.estado || 'Disponible';
+      const nuevoEstado = estadoActual === 'Vendida' ? 'Disponible' : 'Vendida';
+      const colorBoton = estadoActual === 'Vendida' ? '#27ae60' : '#e67e22';
+
+      listaDiv.innerHTML += `
+        <div class="admin-card">
+          <div>
+            <strong>${p.titulo}</strong><br>
+            <small>Precio: $${p.precio} | Estado: <strong>${estadoActual}</strong></small>
+          </div>
+          <div>
+            <button onclick="cambiarEstadoPropiedad('${p.uuid}', '${nuevoEstado}')" style="background: ${colorBoton}; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;">
+              Marcar ${nuevoEstado}
+            </button>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  // Subir nueva propiedad desde el panel interno
+  document.getElementById('formAdminPropiedad').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('admMsg');
+    msg.innerText = "Subiendo foto y guardando...";
+    msg.style.color = "#333";
+
+    const titulo = document.getElementById('admTitulo').value;
+    const precio = document.getElementById('admPrecio').value;
+    const agenteId = document.getElementById('admAgente').value;
+    const file = document.getElementById('admFoto').files[0];
+
+    if (!file) {
+      msg.innerText = "⚠️ Selecciona una foto.";
+      msg.style.color = "#e74c3c";
+      return;
+    }
+
+    // Subir a Storage
+    const fileName = `${Date.now()}-${file.name}`;
+    const { error: uploadError } = await supabaseClient.storage
+      .from('propiedades-fotos')
+      .upload(fileName, file);
+
+    if (uploadError) {
+      msg.innerText = "⚠️ Error al subir foto: " + uploadError.message;
+      msg.style.color = "#e74c3c";
+      return;
+    }
+
+    // Obtener URL pública
+    const { data: publicUrlData } = supabaseClient.storage
+      .from('propiedades-fotos')
+      .getPublicUrl(fileName);
+
+    // Insertar en base de datos
+    const { error: insertError } = await supabaseClient.from('propiedades').insert({
+      titulo: titulo,
+      precio: parseFloat(precio),
+      agente_id: agenteId,
+      imagen_url: publicUrlData.publicUrl,
+      estado: 'Disponible'
+    });
+
+    if (insertError) {
+      msg.innerText = "⚠️ Error al guardar: " + insertError.message;
+      msg.style.color = "#e74c3c";
+    } else {
+      msg.innerText = "¡Propiedad publicada con éxito!";
+      msg.style.color = "#27ae60";
+      document.getElementById('formAdminPropiedad').reset();
+      cargarPanelAdminDatos();
+    }
+  });
+
+  // Función global para cambiar estado de la propiedad
+  window.cambiarEstadoPropiedad = async function(uuid, nuevoEstado) {
+    const { error } = await supabaseClient
+      .from('propiedades')
+      .update({ estado: nuevoEstado })
+      .eq('uuid', uuid);
+
+    if (error) {
+      alert("Error al actualizar estado");
+    } else {
+      cargarPanelAdminDatos();
+    }
+  };
   </script>
+  <!-- MODAL DE ACCESO DE ADMINISTRADOR (Se abre con atajo de teclado) -->
+  <div id="adminModal">
+    <div class="admin-content">
+      <span class="close-admin" onclick="cerrarAdminPanel()">&times;</span>
+      
+      <!-- Vista 1: Pedir contraseña -->
+      <div id="adminLoginView">
+        <h2>🔒 Panel de Administración Secreto</h2>
+        <p>Ingresa tu contraseña maestra para continuar:</p>
+        <div style="margin-bottom: 15px;">
+          <input type="password" id="inputMasterPass" placeholder="Contraseña..." style="width: 100%; padding: 10px; box-sizing: border-box;">
+        </div>
+        <button onclick="verificarMasterPass()" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Entrar</button>
+        <p id="errorPass" style="color: #e74c3c; margin-top: 10px;"></p>
+      </div>
+
+      <!-- Vista 2: El Panel Completo (Oculto hasta poner contraseña) -->
+      <div id="adminDashboardView" style="display: none;">
+        <h2>🏡 Panel de Control y Propiedades</h2>
+        
+        <hr style="margin: 20px 0;">
+
+        <h3>Agregar Nueva Propiedad</h3>
+        <form id="formAdminPropiedad">
+          <div style="margin-bottom: 10px;">
+            <label>Título:</label>
+            <input type="text" id="admTitulo" required style="width: 100%; padding: 8px; box-sizing: border-box;">
+          </div>
+          <div style="margin-bottom: 10px;">
+            <label>Precio ($USD):</label>
+            <input type="number" id="admPrecio" required style="width: 100%; padding: 8px; box-sizing: border-box;">
+          </div>
+          <div style="margin-bottom: 10px;">
+            <label>Asignar Agente:</label>
+            <select id="admAgente" required style="width: 100%; padding: 8px; box-sizing: border-box;">
+              <option value="">Cargando agentes...</option>
+            </select>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <label>Foto:</label>
+            <input type="file" id="admFoto" accept="image/*" required style="width: 100%;">
+          </div>
+          <button type="submit" style="background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Publicar Propiedad</button>
+          <p id="admMsg" style="margin-top: 10px;"></p>
+        </form>
+
+        <hr style="margin: 30px 0;">
+
+        <h3>Propiedades Registradas</h3>
+        <div id="admListaProp">Cargando...</div>
+      </div>
+
+    </div>
+  </div>
 </body>
 </html>
