@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración - Vivienda Libre</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+    .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-weight: bold; margin-bottom: 5px; }
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+    button:hover { background: #2980b9; }
+    .hidden { display: none !important; }
+    .property-card { display: flex; justify-content: space-between; align-items: center; background: #fafafa; border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 4px; }
+    .error { color: #e74c3c; margin-top: 10px; }
+    .success { color: #27ae60; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- SECCIÓN DE LOGIN -->
+    <div id="loginSection">
+      <h2>🔑 Acceso de Administrador</h2>
+      <form id="loginForm">
+        <div class="form-group">
+          <label>Correo electrónico:</label>
+          <input type="email" id="adminEmail" required>
+        </div>
+        <div class="form-group">
+          <label>Contraseña:</label>
+          <input type="password" id="adminPassword" required>
+        </div>
+        <button type="submit">Iniciar Sesión</button>
+        <p id="loginError" class="error"></p>
+      </form>
+    </div>
+
+    <!-- SECCIÓN DEL PANEL (OCULTA HASTA QUE INICIES SESIÓN) -->
+    <div id="adminPanel" class="hidden">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>🏡 Panel de Control de Propiedades</h2>
+        <button id="btnLogout" style="background: #e74c3c;">Cerrar Sesión</button>
+      </div>
+
+      <hr style="margin: 20px 0;">
+
+      <h3>Agregar Nueva Propiedad</h3>
+      <form id="propertyForm">
+        <div class="form-group">
+          <label>Título de la propiedad:</label>
+          <input type="text" id="propTitulo" required placeholder="Ej: Hermosa casa en zona sur">
+        </div>
+        <div class="form-group">
+          <label>Precio ($USD):</label>
+          <input type="number" id="propPrecio" required placeholder="120000">
+        </div>
+        <div class="form-group">
+          <label>Asignar Agente:</label>
+          <select id="propAgente" required>
+            <option value="">Cargando agentes...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Foto de la propiedad:</label>
+          <input type="file" id="propFoto" accept="image/*" required>
+        </div>
+        <button type="submit" id="btnGuardarProp">Publicar Propiedad</button>
+        <p id="formMsg"></p>
+      </form>
+
+      <hr style="margin: 30px 0;">
+
+      <h3>Propiedades Registradas</h3>
+      <div id="propertiesList">Cargando propiedades...</div>
+    </div>
+  </div>
+
+  <script>
+    // Configuración de Supabase (Usa las mismas credenciales que en tu index.html)
+    const SUPABASE_URL = 'https://jhxgfdfolnmaaqovwmmn.supabase.co';
+    const SUPABASE_KEY = 'AQUI_VA_TU_ANON_KEY'; // Asegúrate de colocar tu llave de Supabase aquí
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const loginSection = document.getElementById('loginSection');
+    const adminPanel = document.getElementById('adminPanel');
+    const loginForm = document.getElementById('loginForm');
+    const loginError = document.getElementById('loginError');
+    const btnLogout = document.getElementById('btnLogout');
+    const propertyForm = document.getElementById('propertyForm');
+    const formMsg = document.getElementById('formMsg');
+    const propAgenteSelect = document.getElementById('propAgente');
+    const propertiesList = document.getElementById('propertiesList');
+
+    // 1. Verificar si ya hay una sesión activa al cargar la página
+    async function checkSession() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session) {
+        loginSection.classList.add('hidden');
+        adminPanel.classList.remove('hidden');
+        cargarDatosAdmin();
+      }
+    }
+    checkSession();
+
+    // 2. Manejar el inicio de sesión
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      loginError.innerText = '';
+      const email = document.getElementById('adminEmail').value;
+      const password = document.getElementById('adminPassword').value;
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        loginError.innerText = '⚠️ Credenciales incorrectas. Verifica tus datos.';
+      } else {
+        loginSection.classList.add('hidden');
+        adminPanel.classList.remove('hidden');
+        cargarDatosAdmin();
+      }
+    });
+
+    // 3. Cerrar sesión
+    btnLogout.addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      adminPanel.classList.add('hidden');
+      loginSection.classList.remove('hidden');
+      loginForm.reset();
+    });
+
+    // 4. Cargar agentes y propiedades en el panel
+    async function cargarDatosAdmin() {
+      // Cargar Agentes en el selector
+      const { data: agentes } = await supabaseClient.from('agentes').select('id, nombre');
+      if (agentes) {
+        propAgenteSelect.innerHTML = '<option value="">Selecciona un agente...</option>';
+        agentes.forEach(a => {
+          propAgenteSelect.innerHTML += `<option value="${a.id}">${a.nombre}</option>`;
+        });
+      }
+
+      // Cargar Propiedades existentes
+      const { data: props, error } = await supabaseClient.from('propiedades').select('*').order('created_at', { ascending: false });
+      if (error) {
+        propertiesList.innerHTML = '<p class="error">Error al cargar propiedades.</p>';
+        return;
+      }
+
+      if (props.length === 0) {
+        propertiesList.innerHTML = '<p>No hay propiedades registradas todavía.</p>';
+        return;
+      }
+
+      propertiesList.innerHTML = '';
+      props.forEach(p => {
+        propertiesList.innerHTML += `
+          <div class="property-card">
+            <div>
+              <strong>${p.titulo}</strong><br>
+              <small>Precio: $${p.precio} | Estado: <strong>${p.estado || 'Disponible'}</strong></small>
+            </div>
+            <div>
+              <button onclick="cambiarEstado('${p.uuid}', '${p.estado === 'Vendida' ? 'Disponible' : 'Vendida'}')" style="background: ${p.estado === 'Vendida' ? '#27ae60' : '#e67e22'}; font-size: 14px; padding: 6px 12px;">
+                ${p.estado === 'Vendida' ? 'Marcar Disponible' : 'Marcar Vendida'}
+              </button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // 5. Registrar nueva propiedad con subida de imagen a Storage
+    propertyForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      formMsg.innerText = "Subiendo imagen y guardando...";
+      formMsg.className = "";
+
+      const titulo = document.getElementById('propTitulo').value;
+      const precio = document.getElementById('propPrecio').value;
+      const agenteId = document.getElementById('propAgente').value;
+      const fileInput = document.getElementById('propFoto');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        formMsg.innerText = "⚠️ Selecciona una foto.";
+        formMsg.className = "error";
+        return;
+      }
+
+      // Subir imagen al Bucket 'propiedades-fotos' de Supabase Storage
+      const fileName = `${Date.now()}-${file.name}`;
+      const { data: uploadData, error: uploadError } = await supabaseClient.storage
+        .from('propiedades-fotos')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        formMsg.innerText = "⚠️ Error al subir la foto: " + uploadError.message;
+        formMsg.className = "error";
+        return;
+      }
+
+      // Obtener la URL pública de la foto subida
+      const { data: publicUrlData } = supabaseClient.storage
+        .from('propiedades-fotos')
+        .getPublicUrl(fileName);
+
+      const fotoUrl = publicUrlData.publicUrl;
+
+      // Insertar propiedad en la base de datos
+      const { error: insertError } = await supabaseClient.from('propiedades').insert({
+        titulo: titulo,
+        precio: parseFloat(precio),
+        agente_id: agenteId,
+        imagen_url: fotoUrl,
+        estado: 'Disponible'
+      });
+
+      if (insertError) {
+        formMsg.innerText = "⚠️ Error al guardar en la base de datos: " + insertError.message;
+        formMsg.className = "error";
+      } else {
+        formMsg.innerText = "¡Propiedad publicada con éxito!";
+        formMsg.className = "success";
+        propertyForm.reset();
+        cargarDatosAdmin();
+      }
+    });
+
+    // 6. Cambiar estado de la propiedad (Disponible / Vendida)
+    window.cambiarEstado = async function(uuid, nuevoEstado) {
+      const { error } = await supabaseClient
+        .from('propiedades')
+        .update({ estado: nuevoEstado })
+        .eq('uuid', uuid);
+
+      if (error) {
+        alert("Error al actualizar estado");
+      } else {
+        cargarDatosAdmin();
+      }
+    };
+  </script>
+</body>
+</html>
