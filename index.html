@@ -1101,13 +1101,18 @@
       const propiedad = allProperties.find(p => p.uuid === propiedadUuid);
       const agenteId = propiedad ? propiedad.agenteId : null;
 
+      // Calculamos la fecha de inicio y la de fin (sumándole 1 hora)
+      const fechaInicio = new Date(fechaVal);
+      const fechaFin = new Date(fechaInicio.getTime() + 60 * 60 * 1000);
+
       const { error } = await supabaseClient.from('citas').insert({
         propiedad_id: propiedadUuid,
         agente_id: agenteId,
         cliente_nombre: document.getElementById('nombreCliente').value,
         cliente_email: document.getElementById('emailCliente').value,
         cliente_telefono: document.getElementById('telefonoCliente').value,
-        inicio: new Date(fechaVal).toISOString(),
+        inicio: fechaInicio.toISOString(),
+        fin: fechaFin.toISOString(), // <-- ¡Esta es la línea clave que faltaba!
         notas: document.getElementById('inputTipoConsulta').value
       });
 
