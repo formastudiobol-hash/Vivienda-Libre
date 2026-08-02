@@ -928,6 +928,8 @@
           id: row.codigo,                        // código visible, ej. VL-1024
           title: row.titulo,
           city: row.departamento,
+          cityReal: row.ciudad,
+          cityName: row.ciudad,
           type: row.tipo,
           operation: row.operacion,
           priceUSD: Number(row.precio_usd),
@@ -1087,7 +1089,7 @@
           <div class="card-body">
             <div class="card-type">${p.type}</div>
             <h3 class="card-title">${p.title}</h3>
-            <div class="card-location">📍 ${p.city}, Bolivia</div>
+            <div class="card-location">📍 ${p.cityReal ? p.cityReal + ', ' : ''}${p.city}, Bolivia</div>
             ${specsHtml}
             <div class="price-usd">$US ${p.priceUSD.toLocaleString()}</div>
             <div class="price-bob">BS ${p.priceBOB.toLocaleString()}</div>
