@@ -210,26 +210,7 @@
     .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
     .card-img-container { position: relative; overflow: hidden; }
     .card-img { width: 100%; height: 190px; object-fit: cover; display: block; }
-
-    .carousel { position: relative; width: 100%; height: 190px; overflow: hidden; background: #e2e8f0; }
-    .carousel-track { display: flex; height: 100%; transition: transform 0.3s ease; }
-    .carousel-slide { width: 100%; height: 190px; object-fit: cover; flex-shrink: 0; }
-    .carousel-arrow {
-      position: absolute; top: 50%; transform: translateY(-50%);
-      background: rgba(15, 23, 42, 0.45); color: #fff; border: none;
-      width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
-      font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center;
-      z-index: 2;
-    }
-    .carousel-arrow:hover { background: rgba(15, 23, 42, 0.7); }
-    .carousel-arrow.prev { left: 8px; }
-    .carousel-arrow.next { right: 8px; }
-    .carousel-dots {
-      position: absolute; bottom: 8px; left: 0; right: 0;
-      display: flex; justify-content: center; gap: 5px; z-index: 2;
-    }
-    .carousel-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.6); }
-    .carousel-dot.active { background: #fff; width: 8px; height: 8px; }
+    .card-link { text-decoration: none; color: inherit; display: block; cursor: pointer; }
     .card-specs { font-size: 13px; color: var(--text-muted, #64748b); margin: 4px 0 8px; }
     .badge { position: absolute; top: 12px; left: 12px; background-color: var(--primary); color: white; padding: 4px 10px; border-radius: 6px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
     .badge.anticretico { background-color: var(--accent); }
@@ -904,7 +885,7 @@
           dormitorios,
           banos,
           superficie_m2,
-          propiedad_imagenes ( url, es_portada, orden )
+          portada_url
         `)
         .eq('estado', 'Disponible')
         .order('created_at', { ascending: false });
@@ -915,33 +896,22 @@
         return;
       }
 
-      allProperties = data.map(row => {
-        const imagenes = (row.propiedad_imagenes || []).slice().sort((a, b) => {
-          if (a.es_portada && !b.es_portada) return -1;
-          if (!a.es_portada && b.es_portada) return 1;
-          return (a.orden || 0) - (b.orden || 0);
-        });
-        const urls = imagenes.map(img => img.url);
-
-        return {
-          uuid: row.id,                         // ID real (uuid) — necesario para agendar la cita
-          id: row.codigo,                        // código visible, ej. VL-1024
-          title: row.titulo,
-          city: row.departamento,
-          cityReal: row.ciudad,
-          cityName: row.ciudad,
-          type: row.tipo,
-          operation: row.operacion,
-          priceUSD: Number(row.precio_usd),
-          priceBOB: Number(row.precio_bob),
-          agenteId: row.agente_id,
-          dormitorios: row.dormitorios,
-          banos: row.banos,
-          superficieM2: row.superficie_m2,
-          images: urls.length ? urls : [PROPERTY_IMAGES[0]],
-          image: urls.length ? urls[0] : PROPERTY_IMAGES[0]
-        };
-      });
+      allProperties = data.map(row => ({
+        uuid: row.id,                         // ID real (uuid) — necesario para agendar la cita y para el detalle
+        id: row.codigo,                        // código visible, ej. VL-1024
+        title: row.titulo,
+        city: row.departamento,
+        cityReal: row.ciudad,
+        type: row.tipo,
+        operation: row.operacion,
+        priceUSD: Number(row.precio_usd),
+        priceBOB: Number(row.precio_bob),
+        agenteId: row.agente_id,
+        dormitorios: row.dormitorios,
+        banos: row.banos,
+        superficieM2: row.superficie_m2,
+        image: row.portada_url || PROPERTY_IMAGES[0]
+      }));
     }
 
     window.onload = async function() {
@@ -1020,28 +990,6 @@
       navigateTo('screen-resultados');
     }
 
-    const carouselIndex = {};
-
-    function moverCarrusel(event, propertyId, direccion) {
-      event.stopPropagation();
-      const carousel = document.getElementById(`carousel-${propertyId}`);
-      if (!carousel) return;
-
-      const track = carousel.querySelector('.carousel-track');
-      const slides = track.children;
-      const total = slides.length;
-      if (total <= 1) return;
-
-      let actual = carouselIndex[propertyId] || 0;
-      actual = (actual + direccion + total) % total;
-      carouselIndex[propertyId] = actual;
-
-      track.style.transform = `translateX(-${actual * 100}%)`;
-
-      const dots = carousel.querySelectorAll('.carousel-dot');
-      dots.forEach((dot, i) => dot.classList.toggle('active', i === actual));
-    }
-
     function renderPropertiesPage() {
       const grid = document.getElementById('property-grid');
       if (currentPage === 1) grid.innerHTML = '';
@@ -1051,23 +999,9 @@
       const pageItems = filteredPropertiesList.slice(start, end);
 
       pageItems.forEach(p => {
-        const card = document.createElement('div');
-        card.className = 'card';
-
-        const slidesHtml = p.images.map(url =>
-          `<img src="${url}" class="carousel-slide" alt="${p.title}">`
-        ).join('');
-
-        const dotsHtml = p.images.length > 1
-          ? p.images.map((_, i) => `<span class="carousel-dot ${i === 0 ? 'active' : ''}"></span>`).join('')
-          : '';
-
-        const arrowsHtml = p.images.length > 1
-          ? `
-            <button type="button" class="carousel-arrow prev" onclick="moverCarrusel(event, '${p.uuid}', -1)">‹</button>
-            <button type="button" class="carousel-arrow next" onclick="moverCarrusel(event, '${p.uuid}', 1)">›</button>
-          `
-          : '';
+        const card = document.createElement('a');
+        card.className = 'card card-link';
+        card.href = `propiedad.html?id=${p.uuid}`;
 
         const specsParts = [];
         if (p.dormitorios) specsParts.push(`🛏️ ${p.dormitorios} dorm.`);
@@ -1079,11 +1013,7 @@
 
         card.innerHTML = `
           <div class="card-img-container">
-            <div class="carousel" id="carousel-${p.uuid}">
-              <div class="carousel-track">${slidesHtml}</div>
-              ${arrowsHtml}
-              ${dotsHtml ? `<div class="carousel-dots">${dotsHtml}</div>` : ''}
-            </div>
+            <img src="${p.image}" class="card-img" alt="${p.title}" loading="lazy">
             <span class="badge ${p.operation.toLowerCase()}">${p.operation}</span>
           </div>
           <div class="card-body">
@@ -1094,7 +1024,7 @@
             <div class="price-usd">$US ${p.priceUSD.toLocaleString()}</div>
             <div class="price-bob">BS ${p.priceBOB.toLocaleString()}</div>
             <div class="card-actions">
-              <button class="btn-schedule" onclick="openModal('${p.title} - ${p.city}', '${p.uuid}', '${p.id}')">📅 Agendar Cita</button>
+              <button type="button" class="btn-schedule" onclick="event.preventDefault(); event.stopPropagation(); openModal('${p.title} - ${p.city}', '${p.uuid}', '${p.id}')">📅 Agendar Cita</button>
             </div>
           </div>
         `;
@@ -1187,13 +1117,19 @@
       const propiedad = allProperties.find(p => p.uuid === propiedadUuid);
       const agenteId = propiedad ? propiedad.agenteId : null;
 
+      const DURACION_MINUTOS = 45;
+      const fechaInicio = new Date(fechaVal);
+      const fechaFin = new Date(fechaInicio.getTime() + DURACION_MINUTOS * 60000);
+
       const { error } = await supabaseClient.from('citas').insert({
         propiedad_id: propiedadUuid,
         agente_id: agenteId,
         cliente_nombre: document.getElementById('nombreCliente').value,
         cliente_email: document.getElementById('emailCliente').value,
         cliente_telefono: document.getElementById('telefonoCliente').value,
-        inicio: new Date(fechaVal).toISOString(),
+        inicio: fechaInicio.toISOString(),
+        fin: fechaFin.toISOString(),
+        duracion_minutos: DURACION_MINUTOS,
         notas: document.getElementById('inputTipoConsulta').value
       });
 
