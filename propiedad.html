@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vivienda Libre — Detalle de Propiedad</title>
+  <style>
+        :root {
+          --primary: #0a1f3d;
+          --primary-light: #163f73;
+          --accent: #e63946;
+          --accent-hover: #c92a37;
+          --success: #2a9d8f;
+          --bg-color: #f8fafc;
+          --text-main: #1e293b;
+          --text-muted: #64748b;
+          --border-color: #e2e8f0;
+          --radius: 14px;
+          --shadow-sm: 0 4px 12px rgba(10, 31, 61, 0.05);
+          --shadow-md: 0 12px 30px -8px rgba(10, 31, 61, 0.12);
+          --shadow-lg: 0 20px 40px -10px rgba(10, 31, 61, 0.18);
+        }
+    
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); line-height: 1.6; overflow-x: hidden; }
+    
+        /* --- NAVEGACIÓN Y HAMBURGUESA RESPONSIVA --- */
+        header {
+          background-color: var(--primary); color: white; padding: 0 5%;
+          display: flex; justify-content: space-between; align-items: center;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15); position: sticky; top: 0; z-index: 1000; height: 80px;
+          border-bottom: 2px solid rgba(255,255,255,0.08);
+        }
+        .logo { 
+          font-size: 22px; font-weight: 800; letter-spacing: -0.5px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+          transition: transform 0.25s ease;
+        }
+        .logo:hover { transform: scale(1.02); }
+        .logo span { color: var(--accent); }
+    
+        .nav-menu { display: flex; list-style: none; align-items: center; gap: 4px; }
+        .nav-menu li { position: relative; }
+        
+        .nav-menu a, .nav-menu .dropdown-title {
+          color: #cbd5e1; text-decoration: none; padding: 28px 14px; display: block; font-weight: 500; font-size: 13.5px; cursor: pointer;
+          transition: all 0.2s ease; position: relative;
+        }
+        
+        .nav-menu a:hover, .nav-menu .dropdown-title:hover { color: white; background-color: rgba(255,255,255,0.05); }
+    
+        .dropdown-content {
+          display: none; position: absolute; top: 100%; left: 0; background-color: #ffffff;
+          min-width: 220px; box-shadow: var(--shadow-lg); border-radius: 0 0 var(--radius) var(--radius); overflow: hidden; z-index: 1001;
+          border: 1px solid var(--border-color); animation: fadeIn 0.2s ease;
+        }
+        .dropdown-content a { color: var(--text-main); padding: 12px 18px; font-size: 13px; border-bottom: 1px solid var(--border-color); }
+        .dropdown-content a:hover { background-color: #f1f5f9; color: var(--accent); font-weight: 600; padding-left: 22px; }
+        .dropdown:hover .dropdown-content { display: block; }
+    
+        /* Menu hamburguesa */
+        .menu-toggle { display: none; background: none; border: none; color: white; font-size: 26px; cursor: pointer; padding: 8px; }
+    
+        /* --- SISTEMA DE PANTALLAS --- */
+        .screen { display: none; animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .screen.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    
+        /* --- HERO & BUSCADOR --- */
+        .hero {
+          background: linear-gradient(135deg, rgba(10, 31, 61, 0.94), rgba(15, 45, 85, 0.90)), url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80') center/cover;
+          padding: 70px 20px 80px; text-align: center; color: white; position: relative;
+        }
+        .hero h1 { font-size: 36px; margin-bottom: 12px; font-weight: 800; letter-spacing: -0.5px; }
+        .hero p { font-size: 15px; opacity: 0.92; max-width: 680px; margin: 0 auto; font-weight: 400; }
+    
+        .search-box {
+          background: rgba(255, 255, 255, 0.98); max-width: 1000px; margin: 35px auto 0; padding: 25px;
+          border-radius: 18px; box-shadow: var(--shadow-lg); text-align: left; color: var(--text-main);
+          border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 4px; overflow-x: auto; }
+        .tab-btn { 
+          padding: 10px 22px; border: none; background: transparent; font-size: 14px; font-weight: 700; cursor: pointer; 
+          color: var(--text-muted); transition: all 0.2s ease; border-radius: 8px 8px 0 0; white-space: nowrap;
+        }
+        .tab-btn.active { color: var(--accent); background: rgba(230, 57, 70, 0.06); border-bottom: 3px solid var(--accent); }
+    
+        .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; align-items: end; }
+        .filter-group label { display: block; font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .filter-group select, .filter-group input { 
+          width: 100%; padding: 11px 13px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 13.5px; 
+          outline: none; background: #ffffff; color: var(--text-main); font-weight: 500;
+        }
+        .filter-group select:focus, .filter-group input:focus { border-color: var(--primary); }
+        
+        .btn-search {
+          background: linear-gradient(135deg, var(--accent), var(--accent-hover)); color: white; border: none; padding: 13px;
+          border-radius: 8px; font-weight: 700; cursor: pointer; width: 100%; font-size: 14px;
+          transition: all 0.2s ease; display: flex; justify-content: center; align-items: center; gap: 8px;
+          box-shadow: 0 4px 15px rgba(230, 57, 70, 0.3);
+        }
+        .btn-search:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(230, 57, 70, 0.4); }
+    
+        /* --- BANNERS DE ACCIÓN --- */
+        .promo-banners-section { padding: 50px 20px; max-width: 1200px; margin: 0 auto; }
+        .promo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+        
+        .promo-card {
+          position: relative; height: 340px; border-radius: var(--radius); overflow: hidden;
+          box-shadow: var(--shadow-md); display: flex; flex-direction: column;
+          justify-content: flex-end; padding: 28px; color: white;
+          transition: transform 0.3s ease;
+        }
+        .promo-card:hover { transform: translateY(-5px); }
+        
+        .promo-card-bg {
+          position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+          object-fit: cover; z-index: 1; transition: transform 0.5s ease;
+        }
+        .promo-card:hover .promo-card-bg { transform: scale(1.05); }
+        
+        .promo-card-overlay {
+          position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+          background: linear-gradient(180deg, rgba(10,31,61,0.1) 10%, rgba(10,31,61,0.9) 80%);
+          z-index: 2;
+        }
+        
+        .promo-content { position: relative; z-index: 3; }
+        .promo-title { font-size: 20px; font-weight: 800; margin-bottom: 8px; line-height: 1.3; }
+        .promo-desc { font-size: 13.5px; opacity: 0.9; margin-bottom: 18px; line-height: 1.5; }
+        
+        .btn-promo {
+          display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+          background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(8px); color: white; font-weight: 700;
+          padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 13px;
+          transition: all 0.2s ease; border: 1.5px solid rgba(255, 255, 255, 0.4); cursor: pointer;
+        }
+        .btn-promo:hover { background: var(--accent); border-color: var(--accent); }
+    
+        /* --- VALOR Y MAPA --- */
+        .features-section { padding: 50px 20px; background: #ffffff; text-align: center; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; max-width: 1200px; margin: 30px auto 0; }
+        .feature-card { 
+          padding: 28px 22px; border-radius: var(--radius); background: var(--bg-color); border: 1px solid var(--border-color); 
+          text-align: left; transition: all 0.2s ease; box-shadow: var(--shadow-sm); 
+        }
+        .feature-icon { font-size: 32px; margin-bottom: 12px; background: rgba(10,31,61,0.05); width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
+        .feature-title { font-size: 16px; color: var(--primary); margin-bottom: 8px; font-weight: 700; }
+        .feature-desc { font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+    
+        .map-section { background: var(--bg-color); padding: 60px 20px; text-align: center; }
+        .map-container { 
+          position: relative; width: 100%; max-width: 680px; margin: 30px auto 0; background: #ffffff; 
+          padding: 25px; border-radius: 18px; box-shadow: var(--shadow-md); border: 1px solid var(--border-color); 
+        }
+        .bolivia-svg { width: 100%; height: auto; max-height: 480px; filter: drop-shadow(0 4px 10px rgba(10,31,61,0.08)); }
+        
+        .map-pin {
+          position: absolute; width: 16px; height: 16px; background-color: var(--accent); border: 3px solid white;
+          border-radius: 50%; cursor: pointer; box-shadow: 0 0 12px rgba(230,57,70,0.7); transition: transform 0.2s, background-color 0.2s;
+        }
+        .map-pin:hover { transform: scale(1.6); background-color: var(--primary); z-index: 10; }
+        .map-pin::after {
+          content: attr(data-city); position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+          background: var(--primary); color: white; font-size: 10.5px; font-weight: 700; padding: 4px 8px; border-radius: 6px;
+          white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .map-pin:hover::after { opacity: 1; }
+        
+        .pin-cobija { top: 16%; left: 32%; }
+        .pin-trinidad { top: 30%; left: 54%; }
+        .pin-lapaz { top: 40%; left: 24%; }
+        .pin-elalto { top: 43%; left: 21%; }
+        .pin-oruro { top: 54%; left: 30%; }
+        .pin-cochabamba { top: 46%; left: 44%; }
+        .pin-montero { top: 49%; left: 68%; }
+        .pin-santacruz { top: 56%; left: 71%; }
+        .pin-sucre { top: 64%; left: 47%; }
+        .pin-potosi { top: 70%; left: 36%; }
+        .pin-tarija { top: 82%; left: 49%; }
+    
+        .office-info-box {
+          max-width: 680px; margin: 20px auto 0; padding: 18px 22px; background: white; border-left: 5px solid var(--accent);
+          border-radius: 10px; font-size: 13.5px; text-align: left; box-shadow: var(--shadow-sm); line-height: 1.6; border: 1px solid var(--border-color);
+        }
+    
+        /* --- FORMULARIOS & PILLS --- */
+        .pill-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+        .pill-opt {
+          padding: 8px 16px; border: 2px solid var(--border-color); border-radius: 8px;
+          font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-muted);
+          background: #fff; transition: all 0.2s; user-select: none;
+        }
+        .pill-opt.active { background: var(--primary); color: white; border-color: var(--primary); }
+    
+        .department-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; margin-top: 6px; }
+        .dept-card {
+          padding: 10px 8px; text-align: center; border: 2px solid var(--border-color); border-radius: 8px;
+          font-size: 12.5px; font-weight: 600; cursor: pointer; color: var(--text-muted); background: #fff; transition: all 0.2s;
+        }
+        .dept-card.active { background: var(--accent); color: white; border-color: var(--accent); }
+    
+        /* --- PARRILLA DE PROPIEDADES Y TARJETAS --- */
+        .container { max-width: 1200px; margin: 35px auto; padding: 0 20px; }
+        .section-title { font-size: 24px; margin-bottom: 20px; color: var(--primary); border-left: 5px solid var(--accent); padding-left: 12px; font-weight: 800; letter-spacing: -0.5px; }
+    
+        .property-grid, .grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 22px; }
+    
+        .card { background: white; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm); transition: transform 0.25s, box-shadow 0.25s; display: flex; flex-direction: column; border: 1px solid var(--border-color); }
+        .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+        .card-img-container { position: relative; overflow: hidden; }
+        .card-img { width: 100%; height: 190px; object-fit: cover; display: block; }
+        .card-link { text-decoration: none; color: inherit; display: block; cursor: pointer; }
+        .card-specs { font-size: 13px; color: var(--text-muted, #64748b); margin: 4px 0 8px; }
+        .badge { position: absolute; top: 12px; left: 12px; background-color: var(--primary); color: white; padding: 4px 10px; border-radius: 6px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge.anticretico { background-color: var(--accent); }
+        .badge.alquiler { background-color: var(--success); }
+    
+        .card-body { padding: 18px; display: flex; flex-direction: column; flex-grow: 1; }
+        .card-type { font-size: 11px; color: var(--accent); font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+        .card-title { font-size: 15.5px; color: var(--primary); margin: 0 0 6px; font-weight: 700; line-height: 1.3; }
+        .card-location { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 4px; }
+        .price-usd { font-size: 20px; font-weight: 800; color: var(--accent); }
+        .price-bob { font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; font-weight: 600; }
+        
+        .card-actions { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+    
+        .btn-schedule {
+          display: flex; justify-content: center; align-items: center; gap: 6px;
+          background-color: var(--primary); color: white; border: none; padding: 11px;
+          border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s ease;
+          box-shadow: 0 4px 12px rgba(10, 31, 61, 0.18);
+        }
+        .btn-schedule:hover { background-color: var(--primary-light); transform: translateY(-1px); }
+    
+        /* --- PANTALLAS SECUNDARIAS & MODAL --- */
+        .content-box { background: white; padding: 30px; border-radius: var(--radius); box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); }
+        .form-group { margin-bottom: 16px; text-align: left; }
+        .form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input, .form-group textarea, .form-group select {
+          width: 100%; padding: 11px 13px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 13.5px; outline: none; background: #fff;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--primary); }
+    
+        .agent-card { background: white; border-radius: var(--radius); padding: 25px; text-align: center; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); }
+        .agent-avatar { width: 95px; height: 95px; border-radius: 50%; object-fit: cover; margin-bottom: 12px; border: 3px solid var(--accent); }
+    
+        .load-more-container { text-align: center; margin-top: 35px; grid-column: 1 / -1; }
+        .btn-load-more {
+          background-color: var(--primary); color: white; border: none; padding: 12px 28px;
+          border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; transition: all 0.2s ease;
+        }
+        .btn-load-more:hover { background-color: var(--primary-light); }
+    
+        /* MODAL */
+        .modal-overlay {
+          display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+          background: rgba(10, 31, 61, 0.75); backdrop-filter: blur(4px); z-index: 2000; justify-content: center; align-items: center;
+          padding: 15px; animation: fadeIn 0.25s ease;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-card {
+          background: white; border-radius: 18px; max-width: 440px; width: 100%; padding: 28px;
+          box-shadow: var(--shadow-lg); position: relative; max-height: 90vh; overflow-y: auto; border: 1px solid var(--border-color);
+        }
+        .modal-close {
+          position: absolute; top: 16px; right: 18px; font-size: 22px; font-weight: 700;
+          color: var(--text-muted); cursor: pointer; border: none; background: none;
+        }
+        .modal-close:hover { color: var(--accent); }
+    
+        #status-message { display: none; margin-top: 14px; padding: 12px; border-radius: 8px; text-align: center; font-weight: 700; font-size: 13.5px; }
+        #status-message.success { display: block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        #status-message.error { display: block; background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    
+        footer { background-color: var(--primary); color: white; text-align: center; padding: 30px; margin-top: 60px; font-size: 13.5px; border-top: 4px solid var(--accent); }
+    
+        /* --- RESPONSIVE MOBILE ADJUSTMENTS --- */
+        @media (max-width: 900px) {
+          .menu-toggle { display: block; }
+          .nav-menu {
+            display: none; flex-direction: column; position: absolute; top: 80px; left: 0; width: 100%;
+            background-color: var(--primary); padding: 15px 0; border-top: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+          }
+          .nav-menu.mobile-open { display: flex; }
+          .nav-menu a, .nav-menu .dropdown-title { padding: 12px 25px; width: 100%; }
+          .dropdown-content { position: static; background: rgba(255,255,255,0.05); box-shadow: none; border: none; }
+          .dropdown-content a { color: #cbd5e1; padding-left: 40px; }
+          .hero h1 { font-size: 28px; }
+          .hero p { font-size: 14px; }
+          .search-box { padding: 18px; }
+          .filters-grid { grid-template-columns: 1fr; }
+        }
+
+    /* --- Estilos propios de la página de Detalle --- */
+    .detalle-wrap { max-width: 980px; margin: 0 auto; padding: 24px 20px 60px; }
+    .volver-link { display: inline-flex; align-items: center; gap: 6px; color: var(--primary); font-weight: 700; text-decoration: none; margin-bottom: 16px; font-size: 14px; }
+    .volver-link:hover { color: var(--accent); }
+
+    .galeria { position: relative; width: 100%; height: 420px; border-radius: 14px; overflow: hidden; background: #e2e8f0; }
+    .galeria-track { display: flex; height: 100%; transition: transform 0.3s ease; }
+    .galeria-slide { width: 100%; height: 100%; object-fit: cover; flex-shrink: 0; }
+    .galeria-arrow {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      background: rgba(15, 23, 42, 0.5); color: #fff; border: none;
+      width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
+      font-size: 22px; line-height: 1; display: flex; align-items: center; justify-content: center;
+      z-index: 2;
+    }
+    .galeria-arrow:hover { background: rgba(15, 23, 42, 0.75); }
+    .galeria-arrow.prev { left: 14px; }
+    .galeria-arrow.next { right: 14px; }
+    .galeria-dots { position: absolute; bottom: 14px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; z-index: 2; }
+    .galeria-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.6); cursor: pointer; }
+    .galeria-dot.active { background: #fff; width: 10px; height: 10px; }
+
+    .detalle-header { margin-top: 22px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+    .detalle-titulo { font-size: 24px; font-weight: 800; color: var(--primary); }
+    .detalle-ubicacion { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+    .detalle-precio-usd { font-size: 26px; font-weight: 800; color: var(--accent); }
+    .detalle-precio-bob { font-size: 14px; color: var(--text-muted); font-weight: 600; }
+
+    .detalle-specs { display: flex; gap: 18px; flex-wrap: wrap; margin: 18px 0; padding: 16px 0; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
+    .detalle-spec-item { font-size: 14px; color: var(--primary); font-weight: 700; }
+
+    .detalle-descripcion { margin-top: 20px; line-height: 1.7; color: #334155; white-space: pre-line; }
+    .detalle-direccion { margin-top: 10px; color: var(--text-muted); font-size: 14px; }
+
+    .detalle-cta { margin-top: 28px; }
+
+    .cargando-detalle, .error-detalle { max-width: 600px; margin: 80px auto; text-align: center; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="index.html" class="logo" style="text-decoration: none;">
+      🏡 VIVIENDA<span>LIBRE</span>
+    </a>
+  </header>
+
+  <div class="detalle-wrap">
+    <a href="index.html" class="volver-link">‹ Volver al catálogo</a>
+
+    <div id="cargando" class="cargando-detalle">Cargando propiedad...</div>
+    <div id="error-detalle" class="error-detalle" style="display:none;">
+      No se pudo encontrar esta propiedad. Puede que ya no esté disponible.
+    </div>
+
+    <div id="contenido-detalle" style="display:none;">
+      <div class="galeria" id="galeria">
+        <div class="galeria-track" id="galeria-track"></div>
+        <button type="button" class="galeria-arrow prev" onclick="moverGaleria(-1)">‹</button>
+        <button type="button" class="galeria-arrow next" onclick="moverGaleria(1)">›</button>
+        <div class="galeria-dots" id="galeria-dots"></div>
+      </div>
+
+      <div class="detalle-header">
+        <div>
+          <div class="detalle-titulo" id="detalle-titulo"></div>
+          <div class="detalle-ubicacion" id="detalle-ubicacion"></div>
+        </div>
+        <div style="text-align: right;">
+          <div class="detalle-precio-usd" id="detalle-precio-usd"></div>
+          <div class="detalle-precio-bob" id="detalle-precio-bob"></div>
+        </div>
+      </div>
+
+      <div class="detalle-specs" id="detalle-specs"></div>
+
+      <div class="detalle-descripcion" id="detalle-descripcion"></div>
+      <div class="detalle-direccion" id="detalle-direccion"></div>
+
+      <div class="detalle-cta">
+        <button class="btn-schedule" id="btn-agendar" style="width: auto; padding: 14px 32px;">📅 Agendar Cita</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-agendamiento" class="modal-overlay">
+    <div class="modal-card">
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <h3 style="color: var(--primary); font-size: 18px; margin-bottom: 4px; font-weight: 800;">📅 Agendar Cita o Visita</h3>
+      <p id="modal-propiedad-titulo" style="font-size: 12.5px; color: var(--accent); font-weight: 700; margin-bottom: 18px;"></p>
+
+      <form id="formLead">
+        <div class="form-group">
+          <label>FECHA Y HORA:</label>
+          <input type="datetime-local" id="inputFecha" name="fecha" required>
+          <small style="color: var(--text-muted); font-size: 11px;">* No se permiten fechas pasadas ni horarios ya reservados.</small>
+        </div>
+        <div class="form-group">
+          <label>NOMBRE:</label>
+          <input type="text" id="nombreCliente" name="nombre" placeholder="Ej. Carlos Mamani" required>
+        </div>
+        <div class="form-group">
+          <label>TELÉFONO:</label>
+          <input type="tel" id="telefonoCliente" name="telefono" placeholder="Ej. +59171234567" required>
+        </div>
+        <div class="form-group">
+          <label>CORREO ELECTRÓNICO:</label>
+          <input type="email" id="emailCliente" name="email" placeholder="Ej. carlos@correo.com" required>
+        </div>
+        <div class="form-group">
+          <label>PROPIEDAD ID / REFERENCIA:</label>
+          <input type="text" id="propiedadId" name="propiedadId" readonly style="background: #f1f5f9; font-weight: bold; color: var(--text-muted);">
+        </div>
+        <input type="hidden" id="propiedadUuid" name="propiedadUuid">
+        <div class="form-group">
+          <label>TIPO DE CONSULTA:</label>
+          <select id="inputTipoConsulta" name="tipoConsulta" required>
+            <option value="Visita Presencial">Visita Presencial</option>
+            <option value="Videollamada">Videollamada</option>
+            <option value="Información General">Información General</option>
+          </select>
+        </div>
+
+        <button type="submit" id="btnEnviar" class="btn-search" style="margin-top: 10px;">Registrar y Agendar</button>
+      </form>
+
+      <div id="status-message"></div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 Vivienda Libre Bolivia. Red Inmobiliaria Líder.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>
+    const SUPABASE_URL = "https://jhxgfdfolnmaaqovwmmn.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpoeGdmZGZvbG5tYWFxb3Z3bW1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1ODQxODYsImV4cCI6MjEwMTE2MDE4Nn0.LqeHPPK50q04ITZe4aNkQKNJv6TrDt7LyMeFNgahwuw";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let propiedadActual = null;
+    let indiceGaleria = 0;
+
+    function setMinDatetime() {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      const minString = now.toISOString().slice(0, 16);
+      const input = document.getElementById('inputFecha');
+      if (input) input.min = minString;
+    }
+
+    function moverGaleria(direccion) {
+      if (!propiedadActual || propiedadActual.imagenes.length <= 1) return;
+      const total = propiedadActual.imagenes.length;
+      indiceGaleria = (indiceGaleria + direccion + total) % total;
+      document.getElementById('galeria-track').style.transform = `translateX(-${indiceGaleria * 100}%)`;
+      document.querySelectorAll('.galeria-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === indiceGaleria);
+      });
+    }
+
+    async function cargarPropiedad() {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+
+      if (!id) {
+        mostrarError();
+        return;
+      }
+
+      const { data, error } = await supabaseClient
+        .from('propiedades')
+        .select(`
+          id, codigo, titulo, descripcion, direccion, tipo, operacion,
+          precio_usd, precio_bob, departamento, ciudad, dormitorios, banos,
+          superficie_m2, agente_id, portada_url,
+          propiedad_imagenes ( url, es_portada, orden )
+        `)
+        .eq('id', id)
+        .eq('estado', 'Disponible')
+        .single();
+
+      if (error || !data) {
+        mostrarError();
+        return;
+      }
+
+      const imagenesOrdenadas = (data.propiedad_imagenes || []).slice().sort((a, b) => {
+        if (a.es_portada && !b.es_portada) return -1;
+        if (!a.es_portada && b.es_portada) return 1;
+        return (a.orden || 0) - (b.orden || 0);
+      });
+      const imagenes = imagenesOrdenadas.map(img => img.url);
+      if (imagenes.length === 0 && data.portada_url) imagenes.push(data.portada_url);
+
+      propiedadActual = {
+        uuid: data.id,
+        codigo: data.codigo,
+        titulo: data.titulo,
+        descripcion: data.descripcion,
+        direccion: data.direccion,
+        tipo: data.tipo,
+        operacion: data.operacion,
+        precioUSD: Number(data.precio_usd),
+        precioBOB: Number(data.precio_bob),
+        departamento: data.departamento,
+        ciudad: data.ciudad,
+        dormitorios: data.dormitorios,
+        banos: data.banos,
+        superficieM2: data.superficie_m2,
+        agenteId: data.agente_id,
+        imagenes: imagenes.length ? imagenes : ['https://placehold.co/900x600?text=Vivienda+Libre']
+      };
+
+      renderDetalle();
+    }
+
+    function mostrarError() {
+      document.getElementById('cargando').style.display = 'none';
+      document.getElementById('error-detalle').style.display = 'block';
+    }
+
+    function renderDetalle() {
+      const p = propiedadActual;
+
+      document.getElementById('galeria-track').innerHTML = p.imagenes
+        .map(url => `<img src="${url}" class="galeria-slide" alt="${p.titulo}">`)
+        .join('');
+
+      document.getElementById('galeria-dots').innerHTML = p.imagenes.length > 1
+        ? p.imagenes.map((_, i) => `<span class="galeria-dot ${i === 0 ? 'active' : ''}"></span>`).join('')
+        : '';
+
+      document.querySelector('.galeria-arrow.prev').style.display = p.imagenes.length > 1 ? 'flex' : 'none';
+      document.querySelector('.galeria-arrow.next').style.display = p.imagenes.length > 1 ? 'flex' : 'none';
+
+      document.getElementById('detalle-titulo').innerText = p.titulo;
+      document.getElementById('detalle-ubicacion').innerText =
+        `📍 ${p.ciudad ? p.ciudad + ', ' : ''}${p.departamento}, Bolivia · ${p.tipo} · ${p.operacion}`;
+      document.getElementById('detalle-precio-usd').innerText = `$US ${p.precioUSD.toLocaleString()}`;
+      document.getElementById('detalle-precio-bob').innerText = `BS ${p.precioBOB.toLocaleString()}`;
+
+      const specs = [];
+      if (p.dormitorios) specs.push(`🛏️ ${p.dormitorios} dormitorios`);
+      if (p.banos) specs.push(`🚿 ${p.banos} baños`);
+      if (p.superficieM2) specs.push(`📐 ${p.superficieM2} m² de superficie`);
+      document.getElementById('detalle-specs').innerHTML = specs
+        .map(s => `<span class="detalle-spec-item">${s}</span>`)
+        .join('');
+
+      document.getElementById('detalle-descripcion').innerText =
+        p.descripcion || 'Contáctanos para más información sobre esta propiedad.';
+      document.getElementById('detalle-direccion').innerText = p.direccion ? `📍 ${p.direccion}` : '';
+
+      document.title = `${p.titulo} — Vivienda Libre`;
+
+      document.getElementById('cargando').style.display = 'none';
+      document.getElementById('contenido-detalle').style.display = 'block';
+
+      document.getElementById('btn-agendar').onclick = () => {
+        openModal(`${p.titulo} - ${p.ciudad || p.departamento}`, p.uuid, p.codigo);
+      };
+    }
+
+    function openModal(title, uuid, codigo) {
+      setMinDatetime();
+      document.getElementById('modal-propiedad-titulo').innerText = `${title} (Ref: ${codigo || 'N/A'})`;
+      document.getElementById('propiedadId').value = codigo || '';
+      document.getElementById('propiedadUuid').value = uuid || '';
+
+      const statusMsg = document.getElementById('status-message');
+      statusMsg.className = '';
+      statusMsg.style.display = 'none';
+
+      document.getElementById('modal-agendamiento').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('modal-agendamiento').classList.remove('active');
+    }
+
+    document.getElementById('formLead').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const btn = document.getElementById('btnEnviar');
+      const msg = document.getElementById('status-message');
+      const fechaVal = document.getElementById('inputFecha').value;
+      const propiedadUuid = document.getElementById('propiedadUuid').value;
+
+      msg.style.display = 'block';
+
+      const selectedDate = new Date(fechaVal);
+      const now = new Date();
+      if (selectedDate < now) {
+        msg.className = 'error';
+        msg.innerText = '⚠️ La fecha y hora no pueden ser en el pasado.';
+        return;
+      }
+
+      if (!propiedadUuid) {
+        msg.className = 'error';
+        msg.innerText = '⚠️ No se pudo identificar la propiedad. Vuelve a intentarlo.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = "Enviando...";
+
+      const agenteId = propiedadActual ? propiedadActual.agenteId : null;
+
+      const DURACION_MINUTOS = 45;
+      const fechaInicio = new Date(fechaVal);
+      const fechaFin = new Date(fechaInicio.getTime() + DURACION_MINUTOS * 60000);
+
+      const { error } = await supabaseClient.from('citas').insert({
+        propiedad_id: propiedadUuid,
+        agente_id: agenteId,
+        cliente_nombre: document.getElementById('nombreCliente').value,
+        cliente_email: document.getElementById('emailCliente').value,
+        cliente_telefono: document.getElementById('telefonoCliente').value,
+        inicio: fechaInicio.toISOString(),
+        fin: fechaFin.toISOString(),
+        duracion_minutos: DURACION_MINUTOS,
+        notas: document.getElementById('inputTipoConsulta').value
+      });
+
+      if (error) {
+        if (error.code === '23P01') {
+          msg.className = 'error';
+          msg.innerText = '⚠️ Ese horario ya está reservado (para esta propiedad o para el agente asignado). Elige otro horario.';
+        } else {
+          msg.className = 'error';
+          msg.innerText = '⚠️ Ocurrió un error al registrar la cita. Intenta nuevamente.';
+          console.error(error);
+        }
+      } else {
+        msg.className = 'success';
+        msg.innerText = 'Se envió correctamente. Te contactaremos para confirmar.';
+        document.getElementById('formLead').reset();
+      }
+
+      btn.disabled = false;
+      btn.innerText = "Registrar y Agendar";
+    });
+
+    cargarPropiedad();
+  </script>
+</body>
+</html>
